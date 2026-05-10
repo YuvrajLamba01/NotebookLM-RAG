@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "echo 'Build complete'",
+    "build": "cd client && npm install && npm run build",
     "client": "cd client && npm start",
     "install-all": "npm install && cd client && npm install"
   },
