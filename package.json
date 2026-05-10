@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "cd client && npm install && npm run build",
+    "build": "cd client && npm install && npm run build && cd .. && rm -rf public && mv client/build public",
     "client": "cd client && npm start",
     "install-all": "npm install && cd client && npm install"
   },
