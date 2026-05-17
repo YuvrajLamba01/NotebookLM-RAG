@@ -243,8 +243,11 @@ function App() {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
-    if (!["application/pdf", "text/plain"].includes(file.type)) {
+    // Validate file type by extension (more reliable than MIME type)
+    const validExtensions = [".pdf", ".txt"];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
+    
+    if (!validExtensions.includes(fileExtension)) {
       setError("Please upload a PDF or TXT file");
       return;
     }

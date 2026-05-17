@@ -50,11 +50,19 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ["application/pdf", "text/plain"];
-    if (allowedTypes.includes(file.mimetype)) {
+    // Accept common PDF MIME type variants and text files
+    const mimetype = file.mimetype.toLowerCase();
+    const isPDF = mimetype === "application/pdf" || 
+                  mimetype === "application/x-pdf" || 
+                  mimetype === "application/octet-stream" && file.originalname.endsWith(".pdf");
+    const isTXT = mimetype === "text/plain" || 
+                  mimetype === "text/txt" ||
+                  mimetype === "application/octet-stream" && file.originalname.endsWith(".txt");
+    
+    if (isPDF || isTXT) {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF and TXT files are allowed"));
+      cb(new Error(`Invalid file type: ${file.mimetype}. Only PDF and TXT files are allowed`), false);
     }
   },
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
@@ -80,7 +88,16 @@ app.get("/api/documents", async (req, res) => {
 });
 
 // Upload and index document
-app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
+app.post("/api/documents/upload", (req, res, next) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      // Multer error (file filter or size limit)
+      console.error("Multer error:", err.message);
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file provided" });
@@ -89,6 +106,7 @@ app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
     const collectionName = buildCollectionName(req.file.originalname);
 
     console.log(`\n[API] Received file: ${req.file.originalname}`);
+    console.log(`[API] File MIME type: ${req.file.mimetype}`);
     console.log(`[API] Collection: ${collectionName}`);
 
     // Index the document
