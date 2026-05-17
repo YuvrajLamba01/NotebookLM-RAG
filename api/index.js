@@ -50,12 +50,12 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     // Accept common PDF MIME type variants and text files
     const mimetype = file.mimetype.toLowerCase();
-    const isPDF = mimetype === "application/pdf" || 
-                  mimetype === "application/x-pdf" || 
-                  mimetype === "application/octet-stream" && file.originalname.endsWith(".pdf");
-    const isTXT = mimetype === "text/plain" || 
-                  mimetype === "text/txt" ||
-                  mimetype === "application/octet-stream" && file.originalname.endsWith(".txt");
+    const isPDF = (mimetype === "application/pdf") || 
+                  (mimetype === "application/x-pdf") || 
+                  (mimetype === "application/octet-stream" && file.originalname.endsWith(".pdf"));
+    const isTXT = (mimetype === "text/plain") || 
+                  (mimetype === "text/txt") ||
+                  (mimetype === "application/octet-stream" && file.originalname.endsWith(".txt"));
     
     if (isPDF || isTXT) {
       cb(null, true);
@@ -69,16 +69,16 @@ const upload = multer({
 // Apply JSON parser AFTER file upload routes to avoid parsing multipart data
 // Use a custom middleware to skip JSON parsing for multipart requests
 app.use((req, res, next) => {
-  // Skip JSON parsing for multipart/form-data requests
-  if (req.is("multipart/form-data")) {
+  // Skip JSON parsing for multipart requests (catches all multipart variants)
+  if (req.is("multipart/*")) {
     return next();
   }
   express.json({ limit: "50mb" })(req, res, next);
 });
 
 app.use((req, res, next) => {
-  // Skip URL encoding for multipart/form-data requests
-  if (req.is("multipart/form-data")) {
+  // Skip URL encoding for multipart requests (catches all multipart variants)
+  if (req.is("multipart/*")) {
     return next();
   }
   express.urlencoded({ limit: "50mb", extended: true })(req, res, next);
