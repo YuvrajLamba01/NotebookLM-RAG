@@ -256,9 +256,7 @@ function App() {
     setError(null);
 
     try {
-      const response = await api.post("/api/documents/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.post("/api/documents/upload", formData);
 
       // Add new document to list
       setDocuments((prev) => [...prev, response.data.collectionName]);
