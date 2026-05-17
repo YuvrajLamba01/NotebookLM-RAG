@@ -42,14 +42,15 @@ body {
   background: var(--bg-color);
   background-image: var(--bg-gradient);
   color: var(--text-primary);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
+  padding: max(0px, env(safe-area-inset-top)) max(0px, env(safe-area-inset-right)) max(0px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left));
 }
 
 .app {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100dvh;
+  width: 100%;
   background:
     radial-gradient(circle at 12% 18%, rgba(126, 249, 255, 0.12), transparent 26%),
     radial-gradient(circle at 86% 12%, rgba(97, 209, 200, 0.10), transparent 24%),
@@ -68,7 +69,7 @@ body {
 
 /* Header */
 .header {
-  padding: 22px 32px;
+  padding: max(22px, env(safe-area-inset-top)) max(32px, env(safe-area-inset-right)) 22px max(32px, env(safe-area-inset-left));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -77,6 +78,7 @@ body {
   align-items: center;
   z-index: 10;
   background: rgba(5, 9, 18, 0.45);
+  flex-shrink: 0;
 }
 
 .header-content h1 {
@@ -868,6 +870,88 @@ body {
   display: none;
 }
 
+/* RAG Features Toggle */
+.rag-features-toggle {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.feature-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  background: rgba(126, 249, 255, 0.05);
+  border: 1px solid rgba(126, 249, 255, 0.15);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+  user-select: none;
+}
+
+.feature-toggle:hover {
+  background: rgba(126, 249, 255, 0.08);
+  border-color: rgba(126, 249, 255, 0.25);
+}
+
+.feature-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.feature-toggle input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.feature-toggle input[type="checkbox"]:checked + .toggle-label {
+  color: var(--accent-primary);
+}
+
+.toggle-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(11, 17, 30, 0.95);
+  border: 1px solid rgba(126, 249, 255, 0.2);
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  margin-bottom: 8px;
+  z-index: 1000;
+}
+
+.feature-toggle:hover .toggle-tooltip {
+  opacity: 1;
+}
+
+.feature-toggle input[type="checkbox"]:disabled + .toggle-label {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* ============================================
    Tablet breakpoint (≤ 1024px)
    ============================================ */
@@ -1005,6 +1089,33 @@ body {
     max-width: 100%;
   }
 
+  /* RAG Features Toggle on Mobile */
+  .rag-features-toggle {
+    gap: 8px;
+    margin-top: 10px;
+    padding: 10px 0;
+  }
+
+  .feature-toggle {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  .feature-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .toggle-label {
+    font-size: 12px;
+  }
+
+  .toggle-tooltip {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
   .query-form {
     border-radius: 16px;
     padding: 6px;
@@ -1074,7 +1185,7 @@ body {
    ============================================ */
 @media (max-width: 480px) {
   .header {
-    padding: 12px 14px;
+    padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left));
   }
 
   .header-content h1 {

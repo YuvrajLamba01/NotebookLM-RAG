@@ -9,6 +9,7 @@ import {
   queryDocument,
   getAvailableCollections,
   removeCollection,
+  getRAGMetrics,
 } from "./services/ragPipeline.js";
 
 
@@ -116,10 +117,10 @@ app.post("/api/documents/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Query a document
+// Query a document (with advanced options)
 app.post("/api/query", async (req, res) => {
   try {
-    const { query, collectionName, topK } = req.body;
+    const { query, collectionName, topK, options } = req.body;
 
     if (!query) {
       return res.status(400).json({ error: "Query is required" });
@@ -132,7 +133,14 @@ app.post("/api/query", async (req, res) => {
     console.log(`[API] Query: "${query}"`);
     console.log(`[API] Collection: ${collectionName}`);
 
-    const result = await queryDocument(query, collectionName, topK || 3);
+    // Advanced options with defaults
+    const queryOptions = {
+      useCache: options?.useCache !== false,
+      useEnhancement: options?.useEnhancement !== false,
+      useJudgment: options?.useJudgment !== false,
+    };
+
+    const result = await queryDocument(query, collectionName, topK || 3, queryOptions);
 
     res.json(result);
   } catch (error) {
@@ -157,6 +165,55 @@ app.delete("/api/documents/:collectionName", async (req, res) => {
   }
 });
 
+/**
+ * Advanced RAG API Endpoints
+ */
+
+// Get RAG system metrics and cache statistics
+app.get("/api/metrics", (req, res) => {
+  try {
+    const metrics = getRAGMetrics();
+    res.json({
+      success: true,
+      metrics,
+      features: {
+        queryEnhancement: "enabled",
+        queryCache: "enabled",
+        documentValidation: "enabled",
+        llmAsJudge: "enabled",
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get detailed system information
+app.get("/api/system-info", (req, res) => {
+  try {
+    res.json({
+      success: true,
+      system: {
+        nodeVersion: process.version,
+        environment: process.env.NODE_ENV || "development",
+        models: {
+          llm: process.env.GEMINI_MODEL || "gemini-3-flash-preview",
+          embedding: process.env.EMBEDDING_MODEL || "gemini-embedding-2-preview",
+        },
+        features: {
+          advancedRAG: "v2",
+          documentValidation: "enabled (GIGO Prevention)",
+          queryEnhancement: "enabled (Typo Correction, Rewriting)",
+          queryCache: "enabled (LRU Policy)",
+          llmAsJudge: "enabled (Retrieval Validation)",
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve frontend (SPA fallback)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client/build/index.html"));
@@ -171,13 +228,21 @@ app.use((err, req, res, next) => {
 // Start server if not running in Vercel
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`\n✅ NotebookLM RAG Server running on http://localhost:${PORT}`);
-    console.log(`📄 API Documentation:`);
+    console.log(`\n✅ Advanced NotebookLM RAG Server v2 running on http://localhost:${PORT}`);
+    console.log(`\n📚 Core API Endpoints:`);
     console.log(`   GET  /api/health - Health check`);
     console.log(`   GET  /api/documents - List indexed documents`);
-    console.log(`   POST /api/documents/upload - Upload and index document`);
-    console.log(`   POST /api/query - Query a document`);
+    console.log(`   POST /api/documents/upload - Upload and index document (with validation)`);
+    console.log(`   POST /api/query - Query with advanced features`);
     console.log(`   DELETE /api/documents/:collectionName - Delete document\n`);
+    console.log(`🚀 Advanced Features API:`);
+    console.log(`   GET  /api/metrics - Cache & performance metrics`);
+    console.log(`   GET  /api/system-info - System configuration\n`);
+    console.log(`⚙️  Advanced Features Enabled:`);
+    console.log(`   ✓ Document Validation (GIGO Prevention)`);
+    console.log(`   ✓ Query Enhancement (Typo Correction & Rewriting)`);
+    console.log(`   ✓ Query Cache (LRU Policy)`);
+    console.log(`   ✓ LLM-as-Judge (Retrieval Validation)\n`);
   });
 }
 

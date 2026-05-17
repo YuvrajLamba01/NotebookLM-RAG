@@ -20,6 +20,9 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [useHYDE, setUseHYDE] = useState(false);
+  const [useReranking, setUseReranking] = useState(false);
+  const [useCorrectiveRAG, setUseCorrectiveRAG] = useState(false);
   const fileInputRef = useRef(null);
   const chatEndRef = useRef(null);
 
@@ -320,6 +323,11 @@ function App() {
         query: askedQuery,
         collectionName: selectedDoc,
         topK: 3,
+        options: {
+          useHYDE,
+          useReranking,
+          useCorrectiveRAG,
+        },
       });
 
       setMessages((prev) => [
@@ -330,6 +338,7 @@ function App() {
           answer: response.data.answer,
           chunks: response.data.retrievedChunks || [],
           confidence: response.data.confidence || 0,
+          metrics: response.data.metrics || {},
         },
       ]);
     } catch (err) {
@@ -396,7 +405,7 @@ function App() {
                 onChange={handleFileUpload}
                 style={{ display: "none" }}
               />
-              <p className="upload-hint">PDF or TXT files (max 50MB)</p>
+              <p className="upload-hint">PDF or TXT files (max 5MB)</p>
             </div>
 
             <div className="documents-section">
@@ -550,6 +559,45 @@ function App() {
                       {loading ? "⏳ Asking..." : "Send ↗"}
                     </button>
                   </form>
+
+                  {/* Advanced RAG Features */}
+                  <div className="rag-features-toggle">
+                    <label className="feature-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useHYDE}
+                        onChange={(e) => setUseHYDE(e.target.checked)}
+                        disabled={loading}
+                        aria-label="Enable HYDE (Hypothetical Document Embeddings)"
+                      />
+                      <span className="toggle-label">🎯 HYDE Variations</span>
+                      <span className="toggle-tooltip">Generate multiple query angles for better retrieval</span>
+                    </label>
+
+                    <label className="feature-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useReranking}
+                        onChange={(e) => setUseReranking(e.target.checked)}
+                        disabled={loading}
+                        aria-label="Enable semantic re-ranking"
+                      />
+                      <span className="toggle-label">📊 Re-ranking</span>
+                      <span className="toggle-tooltip">Reorder results by semantic relevance</span>
+                    </label>
+
+                    <label className="feature-toggle">
+                      <input
+                        type="checkbox"
+                        checked={useCorrectiveRAG}
+                        onChange={(e) => setUseCorrectiveRAG(e.target.checked)}
+                        disabled={loading}
+                        aria-label="Enable Corrective RAG"
+                      />
+                      <span className="toggle-label">🔧 Corrective RAG</span>
+                      <span className="toggle-tooltip">Auto-reformulate if results are poor</span>
+                    </label>
+                  </div>
 
                   <p className="composer-help">
                     Try: summary, main topics, purpose, characters, or chapter-by-chapter questions.
