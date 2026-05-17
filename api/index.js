@@ -41,10 +41,8 @@ function buildCollectionName(originalName) {
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// Configure multer for file uploads using memory storage for Vercel compatibility
+// Configure multer BEFORE express parsers to prevent conflicts
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -66,6 +64,24 @@ const upload = multer({
     }
   },
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
+
+// Apply JSON parser AFTER file upload routes to avoid parsing multipart data
+// Use a custom middleware to skip JSON parsing for multipart requests
+app.use((req, res, next) => {
+  // Skip JSON parsing for multipart/form-data requests
+  if (req.is("multipart/form-data")) {
+    return next();
+  }
+  express.json({ limit: "50mb" })(req, res, next);
+});
+
+app.use((req, res, next) => {
+  // Skip URL encoding for multipart/form-data requests
+  if (req.is("multipart/form-data")) {
+    return next();
+  }
+  express.urlencoded({ limit: "50mb", extended: true })(req, res, next);
 });
 
 /**

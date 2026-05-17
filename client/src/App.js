@@ -9,6 +9,7 @@ const api = axios.create({
     window.location.hostname === "127.0.0.1"
       ? "http://127.0.0.1:5000"
       : ""),
+  timeout: 60000, // 60 second timeout for file uploads
 });
 
 function App() {
@@ -259,7 +260,14 @@ function App() {
     setError(null);
 
     try {
-      const response = await api.post("/api/documents/upload", formData);
+      // Let axios automatically set Content-Type header with boundary
+      // Do NOT manually set Content-Type or headers for FormData
+      const response = await api.post("/api/documents/upload", formData, {
+        headers: {
+          // Do not override Content-Type - let FormData and axios handle it
+          // FormData will automatically set: Content-Type: multipart/form-data; boundary=...
+        }
+      });
 
       // Add new document to list
       setDocuments((prev) => [...prev, response.data.collectionName]);
@@ -281,7 +289,7 @@ function App() {
       ]);
       setQuery("");
     } catch (err) {
-      setError(err.response?.data?.error || "Error uploading document");
+      setError(err.response?.data?.error || err.message || "Error uploading document");
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
