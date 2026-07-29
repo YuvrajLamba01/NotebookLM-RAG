@@ -161,8 +161,9 @@ function App() {
     if (typeof text !== "string") return text;
     const trimmed = text.trim();
     if (!trimmed) return trimmed;
-    if (/[.!?…]$/.test(trimmed)) return trimmed;
-    return trimmed + "...";
+    // Return full trimmed answer without appending ellipsis so users see
+    // the complete AI response as provided by the backend.
+    return trimmed;
   };
 
   const formatTime = (ts) => {
@@ -564,7 +565,7 @@ function App() {
                               {message.chunks.map((chunk, idx) => (
                                 <div key={idx} className="source-item">
                                   <span className="source-number">Source {idx + 1}</span>
-                                  <p>{chunk.content.substring(0, 150)}...</p>
+                                  <p>{chunk.content}</p>
                                 </div>
                               ))}
                             </div>
