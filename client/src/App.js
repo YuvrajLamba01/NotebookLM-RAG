@@ -19,8 +19,10 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [docFilter, setDocFilter] = useState("");
   const [useHYDE, setUseHYDE] = useState(false);
   const [useReranking, setUseReranking] = useState(false);
   const [useCorrectiveRAG, setUseCorrectiveRAG] = useState(false);
@@ -154,6 +156,20 @@ function App() {
     });
   };
 
+  // Ensure UI-visible answers end cleanly
+  const sanitizeAnswer = (text) => {
+    if (typeof text !== "string") return text;
+    const trimmed = text.trim();
+    if (!trimmed) return trimmed;
+    if (/[.!?…]$/.test(trimmed)) return trimmed;
+    return trimmed + "...";
+  };
+
+  const formatTime = (ts) => {
+    const d = new Date(ts || Date.now());
+    return d.toLocaleString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+
   const renderSummaryCard = (summaryData, summaryText) => {
     if (summaryData) {
       return (
@@ -226,6 +242,8 @@ function App() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  
+
   const loadDocuments = async () => {
     try {
       const response = await api.get("/api/documents");
@@ -261,12 +279,14 @@ function App() {
 
     try {
       // Let axios automatically set Content-Type header with boundary
-      // Do NOT manually set Content-Type or headers for FormData
+      // Track upload progress via onUploadProgress
       const response = await api.post("/api/documents/upload", formData, {
-        headers: {
-          // Do not override Content-Type - let FormData and axios handle it
-          // FormData will automatically set: Content-Type: multipart/form-data; boundary=...
-        }
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percent);
+          }
+        },
       });
 
       // Add new document to list
@@ -285,6 +305,7 @@ function App() {
             response.data.summaryStructured || null
           ),
           summaryError: response.data.summaryError || null,
+          timestamp: Date.now(),
         },
       ]);
       setQuery("");
@@ -292,6 +313,7 @@ function App() {
       setError(err.response?.data?.error || err.message || "Error uploading document");
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -324,6 +346,7 @@ function App() {
         id: crypto.randomUUID(),
         type: "user",
         query: askedQuery,
+        timestamp: Date.now(),
       },
     ]);
 
@@ -344,10 +367,11 @@ function App() {
         {
           id: crypto.randomUUID(),
           type: "ai",
-          answer: response.data.answer,
+          answer: sanitizeAnswer(response.data.answer),
           chunks: response.data.retrievedChunks || [],
           confidence: response.data.confidence || 0,
           metrics: response.data.metrics || {},
+          timestamp: Date.now(),
         },
       ]);
     } catch (err) {
@@ -379,6 +403,7 @@ function App() {
             <h1>✨ NotebookLM RAG</h1>
             <p>Chat with your documents using AI</p>
           </div>
+          
           <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -415,15 +440,34 @@ function App() {
                 style={{ display: "none" }}
               />
               <p className="upload-hint">PDF or TXT files (max 5MB)</p>
+              {uploading && (
+                <div className="upload-progress" aria-hidden={uploadProgress === 0}>
+                  <div className="upload-progress-bar">
+                    <div style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                  <div className="upload-progress-percent">{uploadProgress}%</div>
+                </div>
+              )}
             </div>
 
             <div className="documents-section">
+              <div className="doc-search">
+                <input
+                  type="search"
+                  placeholder="Search documents..."
+                  value={docFilter}
+                  onChange={(e) => setDocFilter(e.target.value)}
+                  aria-label="Search documents"
+                />
+              </div>
               <h3>Documents</h3>
-              {documents.length === 0 ? (
+              {documents.filter(d => d.toLowerCase().includes(docFilter.toLowerCase())).length === 0 ? (
                 <p className="empty-state">No documents yet</p>
               ) : (
                 <ul className="document-list">
-                  {documents.map((doc) => (
+                  {documents
+                    .filter((d) => d.toLowerCase().includes(docFilter.toLowerCase()))
+                    .map((doc) => (
                     <li
                       key={doc}
                       className={`doc-item ${selectedDoc === doc ? "active" : ""}`}
@@ -462,7 +506,10 @@ function App() {
                   {message.type === "upload" && (
                     <div className="message system-message">
                       <div className="message-content">
-                        <h4>✅ Document Uploaded</h4>
+                        <div className="msg-meta">
+                          <h4>✅ Document Uploaded</h4>
+                          <span className="msg-time">{formatTime(message.timestamp)}</span>
+                        </div>
                         <p>
                           <strong>File:</strong> {message.fileName}
                         </p>
@@ -490,7 +537,10 @@ function App() {
                   {message.type === "user" && (
                     <div className="message user-message">
                       <div className="message-content">
-                        <strong>You:</strong>
+                        <div className="msg-meta">
+                          <strong>You:</strong>
+                          <span className="msg-time">{formatTime(message.timestamp)}</span>
+                        </div>
                         <p>{message.query}</p>
                       </div>
                     </div>
@@ -499,7 +549,10 @@ function App() {
                   {message.type === "ai" && (
                     <div className="message ai-message">
                       <div className="message-content">
-                        <strong>NotebookLM:</strong>
+                        <div className="msg-meta">
+                          <strong>NotebookLM:</strong>
+                          <span className="msg-time">{formatTime(message.timestamp)}</span>
+                        </div>
                         <div className="ai-answer">{formatAnswer(message.answer)}</div>
                         <div className="confidence">
                           Confidence: {(message.confidence * 100).toFixed(1)}%
