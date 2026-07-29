@@ -26,7 +26,17 @@ function validateEnvironment() {
   }
 }
 
-validateEnvironment();
+// Do not throw at module import time on serverless platforms (e.g. Vercel).
+// Validate at runtime for specific operations or rely on the host to provide env vars.
+try {
+  validateEnvironment();
+} catch (err) {
+  // Log a warning instead of crashing the process during import/build.
+  // This allows serverless platforms to import the module even when env vars
+  // are not configured yet (useful during preview builds). Individual
+  // endpoints should still check required values when performing actions.
+  console.warn('[Startup] Environment validation warning:', err.message);
+}
 
 function buildCollectionName(originalName) {
   const baseName = path.parse(originalName || "document").name;
@@ -41,6 +51,18 @@ function buildCollectionName(originalName) {
 
 // Middleware
 app.use(cors());
+
+// Middleware to ensure required env vars are present before RAG operations
+function ensureEnvForRAG(req, res, next) {
+  const requiredVars = ["GEMINI_API_KEY", "QDRANT_URL", "QDRANT_API_KEY"];
+  const missing = requiredVars.filter((name) => !process.env[name] || !process.env[name].trim());
+  if (missing.length > 0) {
+    const message = `Missing required environment variables for RAG operations: ${missing.join(", ")}`;
+    console.warn(`[Runtime Check] ${message}`);
+    return res.status(500).json({ error: message });
+  }
+  next();
+}
 
 // Configure multer BEFORE express parsers to prevent conflicts
 const storage = multer.memoryStorage();
@@ -104,7 +126,7 @@ app.get("/api/documents", async (req, res) => {
 });
 
 // Upload and index document
-app.post("/api/documents/upload", (req, res, next) => {
+app.post("/api/documents/upload", ensureEnvForRAG, (req, res, next) => {
   upload.single("file")(req, res, (err) => {
     if (err) {
       // Multer error (file filter or size limit)
@@ -150,7 +172,7 @@ app.post("/api/documents/upload", (req, res, next) => {
 });
 
 // Query a document (with advanced options)
-app.post("/api/query", async (req, res) => {
+app.post("/api/query", ensureEnvForRAG, async (req, res) => {
   try {
     const { query, collectionName, topK, options } = req.body;
 
@@ -185,7 +207,7 @@ app.post("/api/query", async (req, res) => {
 });
 
 // Delete a document collection
-app.delete("/api/documents/:collectionName", async (req, res) => {
+app.delete("/api/documents/:collectionName", ensureEnvForRAG, async (req, res) => {
   try {
     const { collectionName } = req.params;
 
@@ -205,7 +227,7 @@ app.delete("/api/documents/:collectionName", async (req, res) => {
  */
 
 // Get RAG system metrics and cache statistics
-app.get("/api/metrics", (req, res) => {
+app.get("/api/metrics", ensureEnvForRAG, (req, res) => {
   try {
     const metrics = getRAGMetrics();
     res.json({
